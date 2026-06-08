@@ -1,0 +1,14 @@
+node_modules/
+.venv/
+__pycache__/
+.env
+.env.local
+dist/
+build/
+*.log
+*.pcap
+*.pcapng
+.uv-cache/
+.codex/
+.next/
+firewall-logs/

@@ -1,0 +1,25 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - WAZUH_INDEXER_URL=${WAZUH_INDEXER_URL:-https://localhost:9200}
+      - WAZUH_INDEXER_USER=${WAZUH_INDEXER_USER:-admin}
+      - WAZUH_INDEXER_PASSWORD=${WAZUH_INDEXER_PASSWORD:-change_me}
+      - WAZUH_ALERT_INDEX=${WAZUH_ALERT_INDEX:-wazuh-alerts-*}
+      - VERIFY_SSL=${VERIFY_SSL:-false}
+  frontend:
+    image: node:22-alpine
+    working_dir: /app/frontend
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE=http://localhost:8000
+    volumes:
+      - .:/app
+    depends_on:
+      - backend

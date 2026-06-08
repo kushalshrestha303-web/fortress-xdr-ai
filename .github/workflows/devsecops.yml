@@ -1,0 +1,30 @@
+name: DevSecOps
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  security-and-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install API dependencies
+        working-directory: services/api
+        run: pip install -r requirements.txt pytest
+      - name: Run API tests
+        working-directory: services/api
+        run: pytest
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+      - name: Scan filesystem
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
+

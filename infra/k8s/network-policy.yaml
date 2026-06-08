@@ -1,0 +1,40 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: fortress-default-deny
+  namespace: nepal-fortress-one
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: fortress-api-allow-gateway-and-data
+  namespace: nepal-fortress-one
+spec:
+  podSelector:
+    matchLabels:
+      app: fortress-api
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              istio-injection: enabled
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    - ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 9092
+        - protocol: TCP
+          port: 9200
+        - protocol: TCP
+          port: 8123
+        - protocol: TCP
+          port: 587
+

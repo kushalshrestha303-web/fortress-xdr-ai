@@ -1,0 +1,19 @@
+services:
+  api:
+    build:
+      context: ./services/api
+    environment:
+      SECURITY_NOTIFICATION_TO: kushalshrestha993@gmail.com
+      CORS_ORIGINS: '["http://localhost:3000"]'
+    ports:
+      - "8080:8080"
+
+  command-center:
+    build:
+      context: ./apps/command-center
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
