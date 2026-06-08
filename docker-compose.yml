@@ -1,19 +1,110 @@
-services:
-  api:
-    build:
-      context: ./services/api
-    environment:
-      SECURITY_NOTIFICATION_TO: kushalshrestha993@gmail.com
-      CORS_ORIGINS: '["http://localhost:3000"]'
-    ports:
-      - "8080:8080"
+version: '3.8'
 
-  command-center:
-    build:
-      context: ./apps/command-center
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: fortress-postgres
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8080
+      POSTGRES_USER: fortress
+      POSTGRES_PASSWORD: FortressXDR2024!
+      POSTGRES_DB: fortress_xdr
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - fortress-network
+
+  # OpenSearch (Elasticsearch Alternative)
+  opensearch:
+    image: opensearchproject/opensearch:latest
+    container_name: fortress-opensearch
+    environment:
+      - discovery.type=single-node
+      - OPENSEARCH_INITIAL_ADMIN_PASSWORD=FortressXDR2024!
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    networks:
+      - fortress-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: fortress-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - fortress-network
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fortress-backend
+    environment:
+      DATABASE_URL: postgresql://fortress:FortressXDR2024!@postgres:5432/fortress_xdr
+      OPENSEARCH_URL: https://opensearch:9200
+      OPENSEARCH_USER: admin
+      OPENSEARCH_PASSWORD: FortressXDR2024!
+      REDIS_URL: redis://redis:6379
+      BACKEND_PORT: 8000
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - opensearch
+      - redis
+    volumes:
+      - ./backend:/app
+    networks:
+      - fortress-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # React/Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fortress-frontend
     ports:
       - "3000:3000"
     depends_on:
-      - api
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: http://backend:8000
+    volumes:
+      - ./frontend:/app
+    networks:
+      - fortress-network
+    command: npm run dev
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: fortress-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - fortress-network
+
+networks:
+  fortress-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  opensearch_data:
+  redis_data:
